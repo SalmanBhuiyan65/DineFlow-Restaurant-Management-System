@@ -1,0 +1,80 @@
+<div class="grid-2">
+  <section class="card">
+    <div class="card-title">
+      <span>Active Kitchen Queue (Oldest First)</span>
+      <span class="muted">{{ queued_tickets|length }} active</span>
+    </div>
+
+    {% if queued_tickets %}
+    <div class="grid-3">
+      {% for ticket in queued_tickets %}
+      <div class="table-card {% if ticket.is_late %}ticket-late{% endif %}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+          <strong>{{ ticket.ticket_number }} &middot; {{ ticket.session.table.code }}</strong>
+          {% if ticket.is_late %}
+            <span class="status-pill status-late">LATE {{ ticket.elapsed_minutes }}m</span>
+          {% else %}
+            <span class="status-pill status-cooking">{{ ticket.elapsed_minutes }}m</span>
+          {% endif %}
+        </div>
+        <div class="muted" style="margin-bottom:0.5rem;">Guest: {{ ticket.session.guest_name }}</div>
+        <ul style="margin:0 0 0.75rem; padding-left:1.1rem; font-size:0.86rem;">
+          {% for item in ticket.session.order_items.all %}
+            {% if item.status == 'sent' %}
+            <li>
+              <strong>{{ item.quantity }}x</strong> {{ item.menu_item.name }}
+              {% if item.special_note %}<span class="muted">({{ item.special_note }})</span>{% endif %}
+            </li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+        <form method="post" action="{% url 'floor_kitchen:bump_ticket' ticket.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm" style="width:100%;">Bump Ticket</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="muted">Kitchen queue is clear! All tickets bumped.</p>
+    {% endif %}
+  </section>
+
+  <aside style="display:flex; flex-direction:column; gap:1rem;">
+    <div class="card">
+      <div class="card-title">Remaining Portions to Cook</div>
+      {% if remaining_portions %}
+      <table>
+        <thead><tr><th>Dish</th><th>Portions</th></tr></thead>
+        <tbody>
+          {% for dish_name, qty in remaining_portions %}
+          <tr><td>{{ dish_name }}</td><td><strong>{{ qty }}</strong></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="muted">0 portions pending.</p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Recently Bumped</div>
+      {% if recently_bumped %}
+      <table>
+        <thead><tr><th>Ticket</th><th>Table</th><th>Bumped</th></tr></thead>
+        <tbody>
+          {% for t in recently_bumped %}
+          <tr>
+            <td>{{ t.ticket_number }}</td>
+            <td>{{ t.session.table.code }}</td>
+            <td class="muted">{{ t.bumped_at|time:"H:i" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p class="muted">No tickets bumped yet.</p>
+      {% endif %}
+    </div>
+  </aside>
+</div>
