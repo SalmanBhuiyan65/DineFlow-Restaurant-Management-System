@@ -2,7 +2,7 @@
 
 A unified **5-screen live dinner-service dashboard** built with **Python & Django (MVT/MVC)** for **CSE 451 – Software Engineering (Autumn 2026, IUB)**.
 
-> **Documentation:** Full SRS, SDS, UML/DFD, Coding Standards, Sphinx Docs, Code Review Findings, and Testing reports are organized in the [`wiki/`](./wiki/Home.md) directory (ready for GitHub Wiki).
+> **Documentation:** Full SRS, SDS, UML/DFD, Coding Standards, Sphinx Docs, Code Review Findings, and Testing reports are available in the **[GitHub Wiki](https://github.com/SalmanBhuiyan65/DineFlow-Restaurant-Management-System/wiki)**.
 
 ---
 
