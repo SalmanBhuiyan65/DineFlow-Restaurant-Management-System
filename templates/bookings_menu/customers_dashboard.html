@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Customers &amp; Purchase History | DineFlow{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-title">
+      <span>Customer Database &amp; Purchase History</span>
+      <form method="get" style="display:flex; gap:0.4rem;">
+        <input name="q" value="{{ search_query }}" placeholder="Search name or phone..." aria-label="Search customers" style="width:200px;" />
+        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+      </form>
+    </div>
+
+    {% for customer in customers %}
+    <div class="table-card" style="margin-bottom:0.85rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+          <strong style="font-size:1.02rem;">{{ customer.name }}</strong>
+          <span class="muted">&middot; {{ customer.phone }}</span>
+          {% if customer.email %}<span class="muted">&middot; {{ customer.email }}</span>{% endif %}
+        </div>
+        <div style="display:flex; gap:0.45rem; align-items:center;">
+          <span class="status-pill status-ordering">Visits: {{ customer.total_visits }}</span>
+          <span class="status-pill status-eating">Spent: ৳{{ customer.total_spent|floatformat:2 }}</span>
+          {% if customer.due_balance > 0 %}
+            <span class="status-pill status-late">Due: ৳{{ customer.due_balance|floatformat:2 }}</span>
+          {% else %}
+            <span class="status-pill status-empty">No Due</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if customer.sessions.all %}
+      <details style="margin-top:0.6rem;">
+        <summary class="muted" style="cursor:pointer;">View Order &amp; Bill History ({{ customer.sessions.count }} visit(s))</summary>
+        <table style="margin-top:0.5rem;">
+          <thead><tr><th>Date</th><th>Table</th><th>Items Purchased</th><th>Bill Status</th></tr></thead>
+          <tbody>
+            {% for sess in customer.sessions.all %}
+            <tr>
+              <td class="muted">{{ sess.started_at|date:"M d, H:i" }}</td>
+              <td>{{ sess.table.code }}</td>
+              <td>
+                {% for item in sess.order_items.all %}
+                  {{ item.quantity }}x {{ item.menu_item.name }}{% if not forloop.last %}, {% endif %}
+                {% empty %}
+                  <span class="muted">No items</span>
+                {% endfor %}
+              </td>
+              <td>
+                {% if sess.bill %}
+                  <span class="status-pill status-{{ sess.bill.status }}">
+                    {{ sess.bill.get_status_display }} (৳{{ sess.bill.total|floatformat:2 }})
+                  </span>
+                {% else %}
+                  <span class="muted">Active</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </details>
+      {% endif %}
+    </div>
+    {% empty %}
+      <p class="muted">No customers found.</p>
+    {% endfor %}
+  </section>
+
+  <aside class="card">
+    <div class="card-title">Add New Customer</div>
+    <form method="post" action="{% url 'bookings_menu:create_customer' %}">
+      {% csrf_token %}
+      <div style="margin-bottom:0.75rem;">
+        <label for="cust_name">Full Name</label>
+        <input id="cust_name" name="name" required placeholder="e.g. Nabila Rahman" />
+      </div>
+      <div style="margin-bottom:0.75rem;">
+        <label for="cust_phone">Phone Number</label>
+        <input id="cust_phone" name="phone" required placeholder="e.g. 01711-000111" />
+      </div>
+      <div style="margin-bottom:0.9rem;">
+        <label for="cust_email">Email (optional)</label>
+        <input id="cust_email" name="email" type="email" placeholder="nabila@example.com" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Save Customer</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}
