@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Kitchen Display (KDS) | DineFlow{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem;">
+  <h2 style="margin:0;">Kitchen Display System (KDS)</h2>
+  <span class="muted">Late threshold: &ge; 12 minutes &middot; Auto-syncing every 4s</span>
+</div>
+
+<div id="kitchen-board-container">
+  {% include "floor_kitchen/_kitchen_board.html" %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  setInterval(function () {
+    fetch('/kitchen/partial/')
+      .then(r => r.ok ? r.text() : null)
+      .then(html => {
+        if (html) {
+          document.getElementById('kitchen-board-container').innerHTML = html;
+        }
+      })
+      .catch(() => {});
+  }, 4000);
+</script>
+{% endblock %}

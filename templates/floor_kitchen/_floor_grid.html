@@ -1,0 +1,19 @@
+<div class="grid-3">
+  {% for card in table_cards %}
+  <a href="?table={{ card.table.pk }}" class="table-card {% if selected_table and selected_table.pk == card.table.pk %}selected{% endif %}">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+      <strong style="font-size:1.1rem;">{{ card.table.code }}</strong>
+      <span class="status-pill status-{{ card.table.status }}">{{ card.table.get_status_display }}</span>
+    </div>
+    <div class="muted">{{ card.table.zone }} &middot; {{ card.table.capacity }} seats</div>
+    {% if card.session %}
+      <div style="margin-top:0.55rem; font-size:0.86rem;">
+        <div><strong>{{ card.session.guest_name }}</strong> ({{ card.session.guest_count }} guests)</div>
+        <div class="muted">{{ card.order_count }} item(s) &middot; ৳{{ card.subtotal|floatformat:2 }} &middot; {{ card.session.elapsed_minutes }}m</div>
+      </div>
+    {% else %}
+      <div class="muted" style="margin-top:0.55rem;">Ready for seating</div>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
