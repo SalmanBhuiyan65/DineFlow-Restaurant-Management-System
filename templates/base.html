@@ -1,0 +1,87 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}DineFlow | Restaurant Management System{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/dineflow.css' %}?v=2" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <a href="{% url 'floor_kitchen:floor_dashboard' %}" class="brand">
+      <span>DineFlow</span>
+      <span class="brand-badge">LIVE SERVICE</span>
+    </a>
+
+    {% if user.is_authenticated %}
+    <nav class="nav-tabs" aria-label="Primary Navigation">
+      <a href="{% url 'floor_kitchen:floor_dashboard' %}" class="nav-tab {% if active_tab == 'floor' %}active{% endif %}">1. Floor</a>
+      <a href="{% url 'floor_kitchen:orders_dashboard' %}" class="nav-tab {% if active_tab == 'orders' %}active{% endif %}">2. Orders</a>
+      <a href="{% url 'floor_kitchen:kitchen_display' %}" class="nav-tab {% if active_tab == 'kitchen' %}active{% endif %}">3. Kitchen</a>
+      <a href="{% url 'bookings_menu:bookings_dashboard' %}" class="nav-tab {% if active_tab == 'bookings' %}active{% endif %}">4. Reservations</a>
+      <a href="{% url 'bookings_menu:waitlist_dashboard' %}" class="nav-tab {% if active_tab == 'waitlist' %}active{% endif %}">5. Waitlist</a>
+      <a href="{% url 'bookings_menu:menu_catalog' %}" class="nav-tab {% if active_tab == 'menu' %}active{% endif %}">6. Menu</a>
+      <a href="{% url 'billing_analytics:billing_dashboard' %}" class="nav-tab {% if active_tab == 'billing' %}active{% endif %}">7. Billing</a>
+      <a href="{% url 'billing_analytics:menu_analytics' %}" class="nav-tab {% if active_tab == 'analytics' %}active{% endif %}">8. Analytics</a>
+      <a href="{% url 'billing_analytics:takings_report' %}" class="nav-tab {% if active_tab == 'takings' %}active{% endif %}">9. Takings</a>
+      <a href="{% url 'bookings_menu:customers_dashboard' %}" class="nav-tab {% if active_tab == 'customers' %}active{% endif %}">Customers</a>
+    </nav>
+
+    <div class="role-switcher">
+      <span class="muted">Role:
+        <strong>
+          {% if user.staff_profile %}{{ user.staff_profile.display_name }} ({{ user.staff_profile.get_role_display }}){% else %}{{ user.username }}{% endif %}
+        </strong>
+      </span>
+      <form method="post" action="{% url 'accounts:switch_role' 'host' %}" style="display:inline;">{% csrf_token %}<button class="btn {% if user.staff_profile.role == 'host' %}btn-primary{% else %}btn-outline{% endif %} btn-sm" type="submit">Host</button></form>
+      <form method="post" action="{% url 'accounts:switch_role' 'waiter' %}" style="display:inline;">{% csrf_token %}<button class="btn {% if user.staff_profile.role == 'waiter' %}btn-primary{% else %}btn-outline{% endif %} btn-sm" type="submit">Waiter</button></form>
+      <form method="post" action="{% url 'accounts:switch_role' 'kitchen' %}" style="display:inline;">{% csrf_token %}<button class="btn {% if user.staff_profile.role == 'kitchen' %}btn-primary{% else %}btn-outline{% endif %} btn-sm" type="submit">Kitchen</button></form>
+      <form method="post" action="{% url 'accounts:switch_role' 'manager' %}" style="display:inline;">{% csrf_token %}<button class="btn {% if user.staff_profile.role == 'manager' %}btn-primary{% else %}btn-outline{% endif %} btn-sm" type="submit">Manager</button></form>
+      <a href="{% url 'accounts:logout' %}" class="btn btn-outline btn-sm">Logout</a>
+    </div>
+    {% endif %}
+  </header>
+
+  {% if user.is_authenticated %}
+  <div class="kpi-bar">
+    <div class="kpi-group">
+      <div class="kpi-item">
+        <span class="kpi-label">Today's Sales</span>
+        <span class="kpi-value">৳{{ kpi_sales|floatformat:2 }}</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Seated Guests</span>
+        <span class="kpi-value">{{ kpi_seated_guests }}</span>
+      </div>
+      <div class="kpi-item">
+        <span class="kpi-label">Waiting Parties</span>
+        <span class="kpi-value">{{ kpi_waiting_tables }}</span>
+      </div>
+    </div>
+    {% if kpi_urgent_alerts > 0 %}
+    <div class="kpi-alert">
+      Urgent Alerts: {{ kpi_urgent_alerts }} late ticket/table(s) (&ge; 12 min)
+    </div>
+    {% else %}
+    <span class="muted">All kitchen tickets within 12-min SLA</span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <main class="container">
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="msg {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

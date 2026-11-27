@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Staff Login | DineFlow{% endblock %}
+{% block content %}
+<div style="max-width:460px; margin: 2.5rem auto;">
+  <div class="card">
+    <h2 class="card-title">DineFlow Staff Sign In</h2>
+    <p class="muted">Sign in with your staff credentials or use a 1-click demo role below.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div style="margin-bottom:0.75rem;">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" required placeholder="e.g. salman" />
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Sign In</button>
+    </form>
+
+    {% if demo_profiles %}
+    <hr style="border-color:var(--border); margin:1.25rem 0;" />
+    <div class="muted" style="margin-bottom:0.6rem;">1-Click Demo Role Switcher:</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem;">
+      {% for prof in demo_profiles %}
+      <form method="post" action="{% url 'accounts:switch_role' prof.role %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline" style="width:100%;">
+          {{ prof.display_name }} ({{ prof.get_role_display }})
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
