@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Menu Catalog | DineFlow{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-title">Menu Catalog &amp; Unit Margins</div>
+    {% for cat in categories %}
+    <h4 style="margin:1rem 0 0.4rem; color:var(--accent);">{{ cat.name }}</h4>
+    <table>
+      <thead><tr><th>Dish</th><th>Prep Cost</th><th>Price</th><th>Margin</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for item in cat.items.all %}
+        <tr>
+          <td>
+            <div class="dish-cell">
+              {% if item.image_path %}
+                <img src="{% static item.image_path %}" alt="{{ item.name }}" width="42" height="42" class="dish-thumb" style="width:42px;height:42px;" />
+              {% endif %}
+              <div>
+                <strong>{{ item.name }}</strong>
+                <div class="muted">{{ item.description }}</div>
+              </div>
+            </div>
+          </td>
+          <td>৳{{ item.prep_cost|floatformat:2 }}</td>
+          <td>৳{{ item.selling_price|floatformat:2 }}</td>
+          <td><strong>৳{{ item.margin|floatformat:2 }}</strong></td>
+          <td>
+            {% if item.is_available %}
+              <span class="status-pill status-empty">Available</span>
+            {% else %}
+              <span class="status-pill status-late">Unavailable</span>
+            {% endif %}
+          </td>
+          <td>
+            <form method="post" action="{% url 'bookings_menu:toggle_menu_item' item.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline btn-sm">Toggle</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="muted">No items in {{ cat.name }}.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+  </section>
+
+  <aside class="card">
+    <div class="card-title">Add New Menu Item</div>
+    <form method="post" action="{% url 'bookings_menu:create_menu_item' %}">
+      {% csrf_token %}
+      <div style="margin-bottom:0.7rem;">
+        <label for="cat_id">Category</label>
+        <select id="cat_id" name="category_id" required>
+          {% for cat in categories %}
+          <option value="{{ cat.pk }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:0.7rem;">
+        <label for="dish_name">Dish Name</label>
+        <input id="dish_name" name="name" required placeholder="e.g. Smoked Beef Brisket" />
+      </div>
+      <div style="margin-bottom:0.7rem;">
+        <label for="dish_desc">Description</label>
+        <input id="dish_desc" name="description" placeholder="Short description" />
+      </div>
+      <div class="form-row">
+        <div><label for="prep_cost">Prep Cost (৳)</label><input id="prep_cost" name="prep_cost" type="number" step="0.01" min="0" required /></div>
+        <div><label for="selling_price">Selling Price (৳)</label><input id="selling_price" name="selling_price" type="number" step="0.01" min="1" required /></div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Save Menu Item</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}

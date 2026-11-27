@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Reservations (DF-04) | DineFlow{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-title">Table-Based Reservations Timeline (DF-04)</div>
+    <table>
+      <thead>
+        <tr><th>Time</th><th>Guest</th><th>Party</th><th>Table</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for res in reservations %}
+        <tr>
+          <td>{{ res.reserved_for|date:"M d, H:i" }}</td>
+          <td>
+            <strong>{{ res.guest_name }}</strong>
+            {% if res.notes %}<div class="muted">{{ res.notes }}</div>{% endif %}
+          </td>
+          <td>{{ res.party_size }}</td>
+          <td>{% if res.table %}{{ res.table.code }}{% else %}<span class="muted">Auto</span>{% endif %}</td>
+          <td><span class="status-pill status-{{ res.status }}">{{ res.get_status_display }}</span></td>
+          <td style="display:flex; gap:0.3rem; flex-wrap:wrap;">
+            {% if res.status == 'booked' or res.status == 'late' %}
+            <form method="post" action="{% url 'bookings_menu:seat_reservation' res.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-success btn-sm">Seat</button>
+            </form>
+            {% endif %}
+            {% if res.status == 'booked' %}
+            <form method="post" action="{% url 'bookings_menu:mark_reservation_status' res.pk 'late' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline btn-sm">Late</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="muted">No reservations yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <aside class="card">
+    <div class="card-title">New Reservation</div>
+    <form method="post" action="{% url 'bookings_menu:create_reservation' %}">
+      {% csrf_token %}
+      <div class="form-row">
+        <div><label for="res_guest_name">Guest Name</label><input id="res_guest_name" name="guest_name" required placeholder="e.g. Ayesha" /></div>
+        <div><label for="res_phone">Phone</label><input id="res_phone" name="phone" placeholder="017..." /></div>
+        <div><label for="res_party_size">Party Size</label><input id="res_party_size" name="party_size" type="number" min="1" value="2" required /></div>
+      </div>
+      <div class="form-row">
+        <div><label for="res_for">Reserved For</label><input id="res_for" name="reserved_for" type="datetime-local" required /></div>
+        <div>
+          <label for="res_table_id">Preferred Table (optional)</label>
+          <select id="res_table_id" name="table_id">
+            <option value="">Auto Best-Fit</option>
+            {% for t in tables %}
+            <option value="{{ t.pk }}">{{ t.code }} ({{ t.capacity }} seats - {{ t.get_status_display }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div><label for="res_notes">Notes</label><input id="res_notes" name="notes" placeholder="Window seat, birthday..." /></div>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Add Booking</button>
+    </form>
+  </aside>
+</div>
+{% endblock %}

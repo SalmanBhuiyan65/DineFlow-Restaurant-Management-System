@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Waitlist &amp; Best-Fit Seating (DF-05) | DineFlow{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+  <section class="card">
+    <div class="card-title">
+      <span>Walk-in Waitlist &amp; Best-Fit Seating (DF-05)</span>
+      <span class="muted">{{ waitlist|length }} waiting</span>
+    </div>
+
+    <table style="margin-bottom:1rem;">
+      <thead><tr><th>Party</th><th>Size</th><th>Est. Wait</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for w in waitlist %}
+        <tr>
+          <td><strong>{{ w.guest_name }}</strong><div class="muted">{{ w.phone }}</div></td>
+          <td>{{ w.party_size }}</td>
+          <td>{{ w.estimated_wait_minutes }}m</td>
+          <td>
+            <form method="post" action="{% url 'bookings_menu:seat_waitlist_entry' w.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-success btn-sm">Seat Best-Fit</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="muted">No walk-ins waiting.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h4 style="margin:0 0 0.5rem;">Currently Empty Tables</h4>
+    <div style="display:flex; gap:0.45rem; flex-wrap:wrap;">
+      {% for t in empty_tables %}
+        <span class="status-pill status-empty">{{ t.code }} ({{ t.capacity }} seats)</span>
+      {% empty %}
+        <span class="muted">No empty tables available right now.</span>
+      {% endfor %}
+    </div>
+  </section>
+
+  <aside class="card">
+    <div class="card-title">Add Walk-in Party</div>
+    <p class="muted">Best-Fit Seating automatically picks the smallest empty table that fits the party size.</p>
+    <form method="post" action="{% url 'bookings_menu:add_walkin' %}">
+      {% csrf_token %}
+      <div class="form-row">
+        <div><label for="walkin_guest_name">Guest Name</label><input id="walkin_guest_name" name="guest_name" required placeholder="e.g. Nabila" /></div>
+        <div><label for="walkin_party_size">Party Size</label><input id="walkin_party_size" name="party_size" type="number" min="1" value="2" required /></div>
+      </div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button type="submit" name="auto_seat" value="1" class="btn btn-primary">Auto-Seat Best-Fit</button>
+        <button type="submit" name="auto_seat" value="0" class="btn btn-outline">Add to Waitlist</button>
+      </div>
+    </form>
+  </aside>
+</div>
+{% endblock %}
