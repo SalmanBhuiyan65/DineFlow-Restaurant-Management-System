@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Daily Takings &amp; Shift Summary | DineFlow{% endblock %}
+
+{% block content %}
+<div class="grid-3" style="margin-bottom:1.25rem;">
+  <div class="card">
+    <div class="kpi-label">Today's Total Sales</div>
+    <div style="font-size:1.6rem; font-weight:800;">৳{{ summary.total_sales|floatformat:2 }}</div>
+    {% if summary.prev_summary %}
+    <div class="muted">
+      vs. {{ summary.prev_summary.service_date }} (৳{{ summary.prev_summary.total_sales|floatformat:2 }}):
+      <strong>{% if summary.sales_delta >= 0 %}+{% endif %}{{ summary.delta_pct }}%</strong>
+    </div>
+    {% endif %}
+  </div>
+  <div class="card">
+    <div class="kpi-label">Guests Served &amp; Table Turns</div>
+    <div style="font-size:1.6rem; font-weight:800;">{{ summary.guests_served }} guests</div>
+    <div class="muted">{{ summary.table_turns }} table turn(s) completed</div>
+  </div>
+  <div class="card">
+    <div class="kpi-label">Avg Spend per Guest</div>
+    <div style="font-size:1.6rem; font-weight:800;">৳{{ summary.spend_per_guest|floatformat:2 }}</div>
+    <div class="muted">Includes 5% VAT</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-title">Hourly Sales Breakdown ({{ summary.service_date }})</div>
+    <canvas id="hourlyCanvas" width="760" height="300" style="width:100%; max-height:300px; background:#0f172a; border-radius:10px; border:1px solid var(--border);"></canvas>
+  </section>
+
+  <aside class="card">
+    <div class="card-title">Payment Method Breakdown</div>
+    <table>
+      <thead><tr><th>Method</th><th>Collected</th></tr></thead>
+      <tbody>
+        <tr><td>Cash</td><td><strong>৳{{ summary.method_totals.cash|floatformat:2 }}</strong></td></tr>
+        <tr><td>Card</td><td><strong>৳{{ summary.method_totals.card|floatformat:2 }}</strong></td></tr>
+        <tr><td>bKash</td><td><strong>৳{{ summary.method_totals.bkash|floatformat:2 }}</strong></td></tr>
+      </tbody>
+    </table>
+  </aside>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    const labels = {{ hourly_labels_json|safe }};
+    const values = {{ hourly_values_json|safe }};
+    const canvas = document.getElementById('hourlyCanvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height, pad = 42;
+    const maxVal = Math.max(500, ...values);
+    const barW = (w - pad * 2) / Math.max(1, labels.length) - 8;
+
+    ctx.strokeStyle = '#334155';
+    ctx.strokeRect(pad, 20, w - pad * 2, h - pad - 20);
+
+    labels.forEach((lbl, idx) => {
+      const val = values[idx] || 0;
+      const barH = (val / maxVal) * (h - pad - 35);
+      const x = pad + 6 + idx * ((w - pad * 2) / labels.length);
+      const y = h - pad - barH;
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(x, y, Math.max(8, barW), barH);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px sans-serif';
+      ctx.fillText(lbl.slice(0, 2) + 'h', x, h - 18);
+    });
+  })();
+</script>
+{% endblock %}
