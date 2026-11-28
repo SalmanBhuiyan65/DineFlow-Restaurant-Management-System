@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Menu &amp; Financial Analytics | DineFlow{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:1.25rem;">
+  <div class="card-title">
+    <span>Yearly Profit &amp; Loss Trend (Revenue vs. Expenses vs. Net Profit)</span>
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; font-size:0.85rem;">
+      <span class="status-pill status-ordering">Revenue: ৳{{ pnl.total_revenue|floatformat:0 }}</span>
+      <span class="status-pill status-late">Expenses: ৳{{ pnl.total_expenses|floatformat:0 }}</span>
+      <span class="status-pill status-eating">Net Profit: ৳{{ pnl.total_net_profit|floatformat:0 }}</span>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="pnlCanvas" width="960" height="280" style="width:100%; max-height:280px; background:#0f172a; border-radius:10px; border:1px solid var(--border);"></canvas>
+    <div id="pnlTooltip" class="chart-tooltip"></div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:1.25rem;">
+  <div class="card-title">
+    <span>Menu Engineering Matrix (Sales Volume vs. Unit Margin)</span>
+    <form method="get" style="display:flex; gap:0.5rem; align-items:center;">
+      <select name="days" aria-label="Date range" style="width:auto;">
+        <option value="7" {% if selected_days == 7 %}selected{% endif %}>Last 7 Days</option>
+        <option value="30" {% if selected_days == 30 %}selected{% endif %}>Last 30 Days</option>
+        <option value="90" {% if selected_days == 90 %}selected{% endif %}>Last 90 Days</option>
+      </select>
+      <select name="category" aria-label="Category filter" style="width:auto;">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat.pk }}" {% if selected_category == cat.pk %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+    </form>
+  </div>
+
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <span class="status-pill status-eating">Stars: {{ analytics.quadrant_counts.Star }}</span>
+    <span class="status-pill status-ordering">Plowhorses: {{ analytics.quadrant_counts.Plowhorse }}</span>
+    <span class="status-pill status-bill_requested">Puzzles: {{ analytics.quadrant_counts.Puzzle }}</span>
+    <span class="status-pill status-late">Dogs: {{ analytics.quadrant_counts.Dog }}</span>
+    <span class="muted">Avg Volume: {{ analytics.avg_volume }} &middot; Avg Margin: ৳{{ analytics.avg_margin }}</span>
+  </div>
+
+  <canvas id="scatterCanvas" width="900" height="320" style="width:100%; max-height:320px; background:#0f172a; border-radius:10px; border:1px solid var(--border);"></canvas>
+</div>
+
+<div class="card">
+  <div class="card-title">Dish Classification Breakdown</div>
+  <table>
+    <thead>
+      <tr><th>Dish</th><th>Category</th><th>Volume</th><th>Price</th><th>Cost</th><th>Margin</th><th>Quadrant</th></tr>
+    </thead>
+    <tbody>
+      {% for row in analytics.items %}
+      <tr>
+        <td>
+          <div class="dish-cell">
+            {% if row.image_path %}
+              <img src="{% static row.image_path %}" alt="{{ row.name }}" width="40" height="40" class="dish-thumb" style="width:40px;height:40px;" />
+            {% endif %}
+            <strong>{{ row.name }}</strong>
+          </div>
+        </td>
+        <td>{{ row.category }}</td>
+        <td>{{ row.volume }}</td>
+        <td>৳{{ row.selling_price|floatformat:2 }}</td>
+        <td>৳{{ row.prep_cost|floatformat:2 }}</td>
+        <td>৳{{ row.margin|floatformat:2 }}</td>
+        <td>
+          <span class="status-pill {% if row.quadrant == 'Star' %}status-eating{% elif row.quadrant == 'Plowhorse' %}status-ordering{% elif row.quadrant == 'Puzzle' %}status-bill_requested{% else %}status-late{% endif %}">
+            {{ row.quadrant }}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    // 1. Yearly Profit & Loss Line Graph with interactive tooltips
+    const pnl = {{ pnl_json|safe }};
+    const pCanvas = document.getElementById('pnlCanvas');
+    const pCtx = pCanvas.getContext('2d');
+    const tooltip = document.getElementById('pnlTooltip');
+    const pw = pCanvas.width, ph = pCanvas.height, ppad = 56;
+    const labels = pnl.labels || [];
+    const revs = pnl.revenues || [];
+    const exps = pnl.expenses || [];
+    const nets = pnl.net_profits || [];
+    const allVals = [...revs, ...exps, ...nets, 0];
+    const minV = Math.min(...allVals);
+    const maxV = Math.max(10000, ...allVals);
+    const span = Math.max(1, maxV - minV);
+
+    const xAt = idx => ppad + (idx / Math.max(1, labels.length - 1)) * (pw - ppad * 2);
+    const yAt = val => ph - 36 - ((val - minV) / span) * (ph - 66);
+
+    pCtx.strokeStyle = '#334155';
+    pCtx.strokeRect(ppad, 24, pw - ppad * 2, ph - 60);
+
+    // Zero baseline if losses exist
+    if (minV < 0) {
+      const zy = yAt(0);
+      pCtx.setLineDash([4, 4]);
+      pCtx.strokeStyle = '#64748b';
+      pCtx.beginPath(); pCtx.moveTo(ppad, zy); pCtx.lineTo(pw - ppad, zy); pCtx.stroke();
+      pCtx.setLineDash([]);
+    }
+
+    function drawLine(arr, color) {
+      if (!arr.length) return;
+      pCtx.strokeStyle = color;
+      pCtx.lineWidth = 2.5;
+      pCtx.beginPath();
+      arr.forEach((v, i) => {
+        const x = xAt(i), y = yAt(v);
+        if (i === 0) pCtx.moveTo(x, y); else pCtx.lineTo(x, y);
+      });
+      pCtx.stroke();
+      arr.forEach((v, i) => {
+        pCtx.fillStyle = color;
+        pCtx.beginPath(); pCtx.arc(xAt(i), yAt(v), 4, 0, Math.PI * 2); pCtx.fill();
+      });
+    }
+
+    drawLine(revs, '#3b82f6');
+    drawLine(exps, '#ef4444');
+    drawLine(nets, '#10b981');
+
+    pCtx.fillStyle = '#94a3b8';
+    pCtx.font = '11px sans-serif';
+    labels.forEach((lbl, i) => pCtx.fillText(lbl, xAt(i) - 14, ph - 14));
+
+    pCanvas.addEventListener('mousemove', function (e) {
+      if (!labels.length) return;
+      const rect = pCanvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) * (pw / rect.width);
+      let best = 0, bestDist = Infinity;
+      labels.forEach((_, i) => {
+        const d = Math.abs(mx - xAt(i));
+        if (d < bestDist) { bestDist = d; best = i; }
+      });
+      tooltip.style.display = 'block';
+      tooltip.style.left = Math.min(rect.width - 180, Math.max(10, e.clientX - rect.left + 12)) + 'px';
+      tooltip.style.top = Math.max(10, e.clientY - rect.top - 55) + 'px';
+      tooltip.innerHTML =
+        '<strong>' + labels[best] + '</strong><br/>' +
+        'Revenue: ৳' + (revs[best] || 0).toLocaleString() + '<br/>' +
+        'Expenses: ৳' + (exps[best] || 0).toLocaleString() + '<br/>' +
+        'Net P&amp;L: <strong>৳' + (nets[best] || 0).toLocaleString() + '</strong>';
+    });
+    pCanvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
+    // 2. Menu Engineering Scatter Plot
+    const data = {{ chart_json|safe }};
+    const canvas = document.getElementById('scatterCanvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height, pad = 50;
+    const items = data.items || [];
+    const maxVol = Math.max(10, ...items.map(i => i.volume), data.avg_volume * 1.5);
+    const maxMargin = Math.max(100, ...items.map(i => i.margin), data.avg_margin * 1.5);
+
+    const xOf = v => pad + (v / maxVol) * (w - pad * 2);
+    const yOf = m => h - pad - (m / maxMargin) * (h - pad * 2);
+
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pad, pad, w - pad * 2, h - pad * 2);
+
+    const ax = xOf(data.avg_volume), ay = yOf(data.avg_margin);
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.beginPath(); ctx.moveTo(ax, pad); ctx.lineTo(ax, h - pad); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad, ay); ctx.lineTo(w - pad, ay); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('Puzzles (Low Vol / High Margin)', pad + 8, pad + 18);
+    ctx.fillText('Stars (High Vol / High Margin)', ax + 8, pad + 18);
+    ctx.fillText('Dogs (Low Vol / Low Margin)', pad + 8, h - pad - 10);
+    ctx.fillText('Plowhorses (High Vol / Low Margin)', ax + 8, h - pad - 10);
+
+    const colors = { Star: '#10b981', Plowhorse: '#3b82f6', Puzzle: '#f59e0b', Dog: '#ef4444' };
+    items.forEach(item => {
+      const x = xOf(item.volume), y = yOf(item.margin);
+      ctx.fillStyle = colors[item.quadrant] || '#fff';
+      ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(item.name, x + 9, y + 4);
+    });
+  })();
+</script>
+{% endblock %}
