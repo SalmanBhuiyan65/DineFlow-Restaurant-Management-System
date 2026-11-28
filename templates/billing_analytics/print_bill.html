@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Receipt #{{ bill.pk }} | DineFlow</title>
+  <style>
+    body { font-family: monospace; max-width: 360px; margin: 2rem auto; color: #111; }
+    h2, p { text-align: center; margin: 0.25rem 0; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { text-align: left; padding: 0.3rem 0; border-bottom: 1px dashed #999; }
+    .right { text-align: right; }
+    .total { font-weight: bold; font-size: 1.1rem; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <h2>DineFlow Restaurant</h2>
+  <p>Bill #{{ bill.pk }} &middot; Table {{ bill.session.table.code }}</p>
+  <p>Guest: {{ bill.session.guest_name }} ({{ bill.session.guest_count }})</p>
+  <hr />
+  <table>
+    <thead><tr><th>Item</th><th>Qty</th><th class="right">Amount</th></tr></thead>
+    <tbody>
+      {% for item in bill.session.order_items.all %}
+      <tr>
+        <td>{{ item.menu_item.name }}</td>
+        <td>{{ item.quantity }}</td>
+        <td class="right">৳{{ item.line_total|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <table>
+    <tr><td>Subtotal</td><td class="right">৳{{ bill.subtotal|floatformat:2 }}</td></tr>
+    <tr><td>VAT (5%)</td><td class="right">৳{{ bill.vat_amount|floatformat:2 }}</td></tr>
+    <tr class="total"><td>Total</td><td class="right">৳{{ bill.total|floatformat:2 }}</td></tr>
+    <tr><td>Paid</td><td class="right">৳{{ bill.paid_amount|floatformat:2 }}</td></tr>
+    <tr><td>Due</td><td class="right">৳{{ bill.due_amount|floatformat:2 }}</td></tr>
+  </table>
+  {% if bill.payments.all %}
+    {% for pay in bill.payments.all %}
+    <p>{{ pay.get_method_display }}: ৳{{ pay.amount|floatformat:2 }} ({{ pay.recorded_at|date:"M d, H:i" }})</p>
+    {% endfor %}
+  {% else %}
+  <p>STATUS: {{ bill.get_status_display|upper }}</p>
+  {% endif %}
+  <div class="no-print" style="text-align:center; margin-top:1.25rem;">
+    <button onclick="window.print()">Print Receipt</button>
+  </div>
+</body>
+</html>
